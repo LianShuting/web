@@ -4,13 +4,14 @@ from bs4 import BeautifulSoup
 import pymysql
 
 headers = {'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1"}
+
 database=pymysql.connect(host='localhost', port=3306, user='root', passwd='',db='music1', charset='utf8',
  cursorclass=pymysql.cursors.DictCursor)
-cnnHome = requests.get("http://edition.cnn.com/",headers=headers).text
-cnnHome = BeautifulSoup(cnnHome,"lxml")
-cnnHomes = cnnHome.find_all("a",{"class":"nav-menu-links__link"})
+cnnHome = requests.get("http://edition.cnn.com/",headers=headers).text #to get the index page of cnn
+cnnHome = BeautifulSoup(cnnHome,"lxml") # parsing xml
+cnnHomes = cnnHome.find_all("a",{"class":"nav-menu-links__link"})  #looking for tag 'a'
 for cnnHome in cnnHomes:
-    url = cnnHome['href']
+    url = cnnHome['href']  #finding url
     try:
         url.index("com")
         url = url[2:]
@@ -24,10 +25,10 @@ for cnnHome in cnnHomes:
         newList = requests.get(url)
      
         newsheadlin = newList.text
-        start = newsheadlin.index("articleList")-3
+        start = newsheadlin.index("articleList")-3  #go to the list of news
         end = newsheadlin.index("registryURL")-6
         cnn = newsheadlin[start:end].strip()
-        data = json.loads(cnn)
+        data = json.loads(cnn) #deserialize str into a Python object
         news = data['articleList']
         for new in news:
             headline = new['headline'].replace('"',r'\"')
@@ -35,9 +36,9 @@ for cnnHome in cnnHomes:
             month = new['uri'][6:8]
             day = new['uri'][9:11]
             date = year+"-"+month+"-"+day+" 01:00:00"
-            print(date)
+            print(date)  # extract the headline and the publication of each news 
         
-            description = new['description'].replace('"',r'\"')
+             description = new['description'].replace('"',r'\"')
             description = description.replace("'",r"\'")
             uri = "http://edition.cnn.com/"+new['uri']
             source = requests.get(uri,headers=headers).text
@@ -51,10 +52,10 @@ for cnnHome in cnnHomes:
                     a=0
             c = c.replace('"',r'\"')
             c = c.replace("'",r"\'")
+            allcontent = c+headline
             try:
-                c.index("Trump")
+                allcontent.index("Trump")  #search Trump in title and content
                 cursor = database.cursor()
-                #sql = "insert into zb2017_posts(post_title,)"
                 sql = "insert into zb2017_posts (post_keywords,post_title,post_date,post_content,post_excerpt,post_author) VALUES ("'"%s"'","'"%s"'",'%s',"'"%s"'","'"%s"'","'%s'")" % ("Trump",headline,date,c,description,1)
                 print(sql)
             
@@ -66,14 +67,14 @@ for cnnHome in cnnHomes:
                     cursor.execute(sql)
                     database.commit()
                 except :
-                    print('失败')
+                    print('failed')
                     database.rollback()
-                    #db.close()
+                    
             except ValueError:
                 try:
-                    c.index("Clinton")
+                    allcontent.index("Clinton")
                     cursor = database.cursor()
-                    #sql = "insert into zb2017_posts(post_title,)"
+                    
                     sql = "insert into zb2017_posts (post_keywords,post_title,post_date,post_content,post_excerpt,post_author) VALUES ("'"%s"'","'"%s"'",'%s',"'"%s"'","'"%s"'","'%s'")" % ("Clinton",headline,date,c,description,1)
                     print(sql)
                 
@@ -85,7 +86,7 @@ for cnnHome in cnnHomes:
                         cursor.execute(sql)
                         database.commit()
                     except :
-                        print('失败')
+                        print('failed')
                         database.rollback()
                         #db.close()
                 except ValueError:
